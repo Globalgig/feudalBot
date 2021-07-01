@@ -1,6 +1,7 @@
 import discord
 import os
-import sqlite3
+import sqlite3, csv
+import pandas
 from feudalBotRandomEncounters import *
 from feudalBotMessageFormat import *
 from dotenv import load_dotenv
@@ -222,54 +223,16 @@ async def pillage(ctx, target):
 	return
 
 
-#This is going to stay down here because it's probably going to become supremely ugly
+#Much cuter now that the csvs are set up 
 @bot.command(name = 'setupGame', alisases = ['setup'], help = 'Supplies the values that populate the building/unit tables.')
 async def setupGame(ctx):
-	#Buildings, simple enough
-	buildingInsertionString = 'INSERT INTO buildingList (buildingName, woodCost, ironCost) VALUES'
-	#popSpace Buildings
-	c.execute(buildingInsertionString + '("Hovel", 25, 0)')
-	c.execute(buildingInsertionString + '("House", 40, 15)')
-	c.execute(buildingInsertionString + '("Mansion", 80, 30)')
-	#Worker Buildings
-	c.execute(buildingInsertionString + '("Farm", 25, 0)')
-	c.execute(buildingInsertionString + '("Lumbermill", 25, 0)')
-	c.execute(buildingInsertionString + '("Mine", 25, 0)')
-	c.execute(buildingInsertionString + '("Market", 25, 0)')
-	c.execute(buildingInsertionString + '("Barracks", 25, 0)')
-	c.execute(buildingInsertionString + '("Wizard Tower", 25, 0)')
+	unitsCSV = "./feudalBotUnits.csv"
+	df = pandas.read_csv(unitsCSV)
+	df.to_sql("unitList", con, if_exists = "append", index = False)
 
-
-	unitInsertionString = 'INSERT INTO unitList (unitName, cost, requisiteBuilding, requisiteQuantity, moneyPerTurn, foodPerTurn, woodPerTurn, ironPerTurn, attackValue, defenseValue, magicValue) VALUES'
-	#Units, oh no!
-	#Peasants
-	c.execute(unitInsertionString + '("Chipmunk_Peasant", 10, NULL, 0, 1, 1, 0, 0, 0, 1, 0)') 
-	c.execute(unitInsertionString + '("Raccoon_Peasant", 25, NULL, 0, 2, 1, 0, 0, 0, 1, 0)') 
-	c.execute(unitInsertionString + '("Dog_Peasant", 50, NULL, 0, 2, 3, 0, 0, 1, 1, 0)') 
-	#Farmers
-	c.execute(unitInsertionString + '("Rabbit_Farmer", 30, NULL, 0, -1, 3, 0, 0, 0, 0, 0)') 
-	c.execute(unitInsertionString + '("Mole_Farmer", 60, NULL, 0, -2, 5, 0, 0, 0, 0, 0)') 
-	c.execute(unitInsertionString + '("Pig_Farmer", 100, NULL, 0, -3, 8, 0, -1, 0, 1, 0)') 
-	#Lumberjacks
-	c.execute(unitInsertionString + '("Squirrel_Lumberjack", 30, NULL, 0, -2, -2, 1, 0, 0, 0, 0)') 
-	c.execute(unitInsertionString + '("Deer_Lumberjack", 50, NULL, 0, -3, -3, 3, -1, 0, 1, 0)')
-	c.execute(unitInsertionString + '("Beaver_Lumberjack", 90, NULL, 0, -4, -4, 6, -1, 2, 0, 0)')
-	#Miners
-	c.execute(unitInsertionString + '("Mouse_Miner", 40, NULL, 0, 1, -2, 0, 1, 0, 1, 0)') 
-	c.execute(unitInsertionString + '("Weasel_Miner", 75, NULL, 0, 1, -3, 0, 3, 0, 2, 0)') 
-	c.execute(unitInsertionString + '("Mole_Miner", 120, NULL, 0, 2, -4, 0, 6, 0, 3, 0)')
-	#Merchant
-	c.execute(unitInsertionString + '("Rat_Merchant", 45, NULL, 0, 4, -1, -1, 0, 0, 0, 0)') 
-	c.execute(unitInsertionString + '("Fox_Merchant", 80, NULL, 0, 9, -2, -1, 0, 0, 0, 0)') 
-	c.execute(unitInsertionString + '("Hawk_Merchant", 125, NULL, 0, 15, -3, 0, -1, 0, 0, 0)') 
-	#Knights
-	c.execute(unitInsertionString + '("Skunk_Knight", 50, NULL, 0, -1, -2, 0, -1, 3, 3, 0)') 
-	c.execute(unitInsertionString + '("Fox_Knight", 100, NULL, 0, -3, -3, 0, -1, 5, 5, 0)') 
-	c.execute(unitInsertionString + '("Badger_Knight", 150, NULL, 0, -5, -4, 0, -1, 7, 7, 0)')
-	#Wizard
-	c.execute(unitInsertionString + '("Shrew_Wizard", 80, NULL, 0, -1, -1, 0, -1, 1, 2, 0)') 
-	c.execute(unitInsertionString + '("Frog_Wizard", 140, NULL, 0, -3, -2, 0, -1, 2, 3, 0)')  
-	c.execute(unitInsertionString + '("Owl_Wizard", 200, NULL, 0, -5, -3, 0, -1, 3, 4, 0)') 
+	buildingsCSV = "./feudalBotBuildings.csv"
+	df = pandas.read_csv(buildingsCSV)
+	df.to_sql("buidingList", con, if_exists = "append", index = False)
 	con.commit()
 
 	await ctx.send("Game successfully setup!")
