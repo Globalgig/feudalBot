@@ -83,12 +83,12 @@ async def select(ctx, displayType = None):
 
 		#Specific to each table. Gets the title of the table as a row and also the index from which the embed should start listing
 		startpoint = 3
-		title = "Stats"
+		title = "Township"
 
 		await ctx.send(embed = displayTown(row, [x[0] for x in names], startpoint, title))
 
 	#Display the perTurn stats
-	elif displayType == "perTurn":
+	elif displayType.lower() == "perturn" or displayType.lower() == "pt":
 		c.execute('SELECT * FROM perTurn WHERE discord = ?', (ctx.message.author.id,))
 		row = c.fetchone()
 		c.execute('SELECT name FROM PRAGMA_TABLE_INFO(?)', ("perTurn",))
@@ -98,14 +98,14 @@ async def select(ctx, displayType = None):
 
 		await ctx.send(embed = displayTown(row, [x[0] for x in names], startpoint, title))
 
-	elif displayType == "Buildings":
+	elif displayType.lower() == "buildings" or displayType.lower() == "building":
 		c.execute('SELECT buildingName, quantity FROM buildingsIG WHERE discord = ?', (ctx.message.author.id,))
 		rows = c.fetchall()
 		title = "Buildings"
 
 		await ctx.send(embed = displayBuildingsUnits(rows, title))
 
-	elif displayType == "Units":
+	elif displayType.lower() == "units" or displayType.lower() == "unit":
 		c.execute('SELECT unitName, quantity FROM unitsIG WHERE discord = ?', (ctx.message.author.id,))
 		rows = c.fetchall()
 		title = "Units"
@@ -133,7 +133,6 @@ async def recruit(ctx, unit = None):
 		# rows = c.fetchall()
 		# await ctx.send(embed = formatRows("Units (Cost)", rows))
 
-	#implement a way for all units to be shown not just the ones you are capable of buying
 
 	else:
 		c.execute('SELECT * FROM unitList WHERE unitName = ?', (unit,))
@@ -169,10 +168,12 @@ async def recruit(ctx, unit = None):
 			#perTurn
 			c.execute('UPDATE perTurn SET moneyPerTurn = moneyPerTurn + ?, foodPerTurn = foodPerTurn + ?, woodPerTurn = woodPerTurn + ?, ironPerTurn = ironPerTurn + ?', (purchase[5], purchase[6], purchase[7], purchase[8],))
 			#township
-			c.execute('UPDATE township SET popSpace = popSpace - 1, attackValue = attackValue + ?, defenseValue = defenseValue + ?, magicValue = magicValue + ?', (purchase[9], purchase[10], purchase[11],))
+			c.execute('UPDATE township SET popSpace = popSpace - 1, attackValue = attackValue + ?, defenseValue = defenseValue + ?, magicValue = magicValue + ?', (purchase[8], purchase[10], purchase[11],))
 			con.commit()
 
 			await ctx.send("You have recruited a " + unit + "!")
+			endTurn(ctx)
+			return
 
 
 
@@ -181,7 +182,10 @@ async def explore(ctx):
 	b, m = generateExplore()
 	await ctx.send(b, m)
 
-	#probably repurpose the RandomEncounters into RandomEncountersAndPars
+	await ctx.send("Not implemented! However, your turn has still ended.")
+	endTurn(ctx)
+	return
+
 
 
 
@@ -204,27 +208,29 @@ async def build(ctx, building = None):
 		if playerResources[9] <= 0:
 			await ctx.send("You don't have enough space to build that!")
 			return
-		elif playerResources[6] < purchase[2]:
+		elif playerResources[6] < purchase[1]:
 			await ctx.send("You don't have enough wood to build that!")
 			return
-		elif playerResources[7] < purchase[3]:
+		elif playerResources[7] < purchase[2]:
 			await ctx.send("You don't have enough iron to build that!")
 			return
 		else:
 
 			c.execute('UPDATE buildingsIG SET quantity = quantity + 1 WHERE buildingName = ? AND discord = ?', (building, ctx.message.author.id,))
-			c.execute('UPDATE township SET wood = wood - ?, iron = iron - ? WHERE discord = ?', (purchase[2],purchase[3],ctx.message.author.id,))
+			c.execute('UPDATE township SET wood = wood - ?, iron = iron - ? WHERE discord = ?', (purchase[1],purchase[2],ctx.message.author.id,))
 
+			#So far buildings don't really have an effect. They just provide slots for people
 			await ctx.send("You have built a " + building + "!")
-
-			#So far buildings don't really have an effect. They just provide slots for people.
-			#Also put the endTurn routine here
+			endTurn(ctx)
+			return
 
 
 #This is supposed to be like the attack feature
 @bot.command(name = 'pillage', alisases = ['p'])
 async def pillage(ctx, target):
 	#implement
+	await ctx.send("Not implemented! However, your turn has still ended.")
+	endTurn(ctx)
 	return
 
 
@@ -241,6 +247,15 @@ async def setupGame(ctx):
 	con.commit()
 
 	await ctx.send("Game successfully setup!")
+
+
+def endTurn(ctx):
+	c.execute('SELECT * FROM perTurn WHERE discord = ?', (ctx.message.author.id,))
+	modifiers = c.fetchone()
+
+	c.execute('UPDATE township SET money = money + ?, food = food + ?, wood = wood + ?, iron = iron + ? WHERE discord = ?', (modifiers[2], modifiers[3], modifiers[4], modifiers[5], ctx.message.author.id,))
+	con.commit()
+	return
 
 #COMMENCE!
 bot.run(TOKEN)
