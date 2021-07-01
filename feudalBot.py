@@ -22,7 +22,7 @@ async def on_ready():
 	c.execute('CREATE TABLE IF NOT EXISTS township (id integer PRIMARY KEY, discord integer, name varchar(255), money integer DEFAULT 10, food integer DEFAULT 100, wood integer DEFAULT 0, iron integer DEFAULT 0, popSpace integer DEFAULT 8, buildingSpace integer, attackValue integer DEFAULT 0, defenseValue integer DEFAULT 0, magicValue integer DEFAULT 0)')
 	c.execute('CREATE TABLE IF NOT EXISTS perTurn (id integer PRIMARY KEY, discord integer, moneyPerTurn integer DEFAULT 0, foodPerTurn integer DEFAULT 0, woodPerTurn integer DEFAULT 0, ironPerTurn integer DEFAULT 0)')
 	c.execute('CREATE TABLE IF NOT EXISTS unitList (id integer PRIMARY KEY, unitName varchar(255), cost integer, requisiteBuilding varchar(255), requisiteQuantity integer, moneyPerTurn integer, foodPerTurn integer, woodPerTurn integer, ironPerTurn integer, attackValue integer, defenseValue integer, magicValue integer)')
-	c.execute('CREATE TABLE IF NOT EXISTS buildingList (id integer PRIMARY KEY, buildingName varchar(255), woodCost integer, ironCost integer)')
+	c.execute('CREATE TABLE IF NOT EXISTS buildingList (id integer PRIMARY KEY, buildingName varchar(255), woodCost integer, ironCost integer, popSlots integer)')
 	c.execute('CREATE TABLE IF NOT EXISTS unitsIG (id integer PRIMARY KEY, discord integer, unitName varchar(255), quantity integer DEFAULT 0)')
 	c.execute('CREATE TABLE IF NOT EXISTS buildingsIG (id integer PRIMARY KEY, discord integer, buildingName varchar(255), quantity integer DEFAULT 0)')
 	con.commit()
@@ -135,45 +135,52 @@ async def recruit(ctx, unit = None):
 
 
 	else:
+		#Setting all the proper variables before parsing them out below. A little unruly, admittedly
 		c.execute('SELECT * FROM unitList WHERE unitName = ?', (unit,))
 		purchase = c.fetchone()
 		c.execute('SELECT quantity FROM buildingsIG WHERE discord = ? AND buildingName = (SELECT requisiteBuilding FROM unitList WHERE unitName = ?)', (ctx.message.author.id,unit,))
 		curNumOfBuildings = c.fetchone()
 		if not curNumOfBuildings:
-			curNumOfBuildings = 0
+			curNumOfBuildings = [0,]
 		c.execute('SELECT requisiteQuantity FROM unitList WHERE unitName = ?', (unit,))
 		reqNumOfBuildings = c.fetchone()
 		c.execute('SELECT popSpace FROM township WHERE discord = ?', (ctx.message.author.id,))
 		popSpace = c.fetchone()
 		c.execute('SELECT money FROM township WHERE discord = ?', (ctx.message.author.id,))
 		curMoney = c.fetchone()
+		c.execute('SELECT quantity FROM unitsIG WHERE discord = ? AND unitName = ?', (ctx.message.author.id,unit))
+		curNumOfUnits = c.fetchone()
 
 
 		#create a category somewhere that figures out available space (from buildings, not buildingSpace)
 		#and factors in population limit
 
 		if popSpace == 0:
-			await ctx.send("You don't have enough space to recruit that unit!")
+			await ctx.send("You don't have enough houses to recruit that unit!")
 			return
 		elif curMoney[0] < purchase[2]:
 			await ctx.send("You don't have enough money to recruit that unit!")
 			return
-		elif curNumOfBuildings < reqNumOfBuildings[0]:
+		elif curNumOfBuildings[0] < reqNumOfBuildings[0]:
 			await ctx.send("You don't have the proper number of buildings to recruit that unit!")
 			return
-		else:
-			c.execute('UPDATE unitsIG SET quantity = quantity + 1 WHERE unitName = ? AND discord = ?', (unit, ctx.message.author.id,))
-			c.execute('UPDATE township SET money = money - ? WHERE discord = ?', (purchase[2],ctx.message.author.id,))
+		elif purchase[3] != None:
+			if curNumOfUnits[0] >= curNumOfBuildings[0] * 2:
+				await ctx.send("You don't have enough space in your specialty buildings for that unit!")
+				return
+		
+		c.execute('UPDATE unitsIG SET quantity = quantity + 1 WHERE unitName = ? AND discord = ?', (unit, ctx.message.author.id,))
+		c.execute('UPDATE township SET money = money - ? WHERE discord = ?', (purchase[2],ctx.message.author.id,))
 
-			#perTurn
-			c.execute('UPDATE perTurn SET moneyPerTurn = moneyPerTurn + ?, foodPerTurn = foodPerTurn + ?, woodPerTurn = woodPerTurn + ?, ironPerTurn = ironPerTurn + ?', (purchase[5], purchase[6], purchase[7], purchase[8],))
-			#township
-			c.execute('UPDATE township SET popSpace = popSpace - 1, attackValue = attackValue + ?, defenseValue = defenseValue + ?, magicValue = magicValue + ?', (purchase[8], purchase[10], purchase[11],))
-			con.commit()
+		#perTurn
+		c.execute('UPDATE perTurn SET moneyPerTurn = moneyPerTurn + ?, foodPerTurn = foodPerTurn + ?, woodPerTurn = woodPerTurn + ?, ironPerTurn = ironPerTurn + ?', (purchase[5], purchase[6], purchase[7], purchase[8],))
+		#township
+		c.execute('UPDATE township SET popSpace = popSpace - 1, attackValue = attackValue + ?, defenseValue = defenseValue + ?, magicValue = magicValue + ?', (purchase[8], purchase[10], purchase[11],))
+		con.commit()
 
-			await ctx.send("You have recruited a " + unit + "!")
-			endTurn(ctx)
-			return
+		await ctx.send("You have recruited a " + unit + "!")
+		endTurn(ctx)
+		return
 
 
 
@@ -196,28 +203,32 @@ async def build(ctx, building = None):
 		#List buildings
 		c.execute('SELECT * FROM buildingList')
 		rows = c.fetchall()
+		print(rows)
 		await ctx.send(embed = formatBuildings("Building Cost (Wood/Iron)", rows))
 
 	else:
 		#Check if player has enough resources
-		c.execute('SELECT buildingSpace, wood, iron FROM township WHERE discord = ?', (ctx.message.author.id,))
+		c.execute('SELECT * FROM township WHERE discord = ?', (ctx.message.author.id,))
 		playerResources = c.fetchone()
 		c.execute('SELECT * FROM buildingList WHERE buildingName = ?', (building,))
 		purchase = c.fetchone()
 
-		if playerResources[9] <= 0:
+		print(playerResources)
+
+		if playerResources[8] <= 0:
 			await ctx.send("You don't have enough space to build that!")
 			return
-		elif playerResources[6] < purchase[1]:
+		elif playerResources[5] < purchase[2]:
 			await ctx.send("You don't have enough wood to build that!")
 			return
-		elif playerResources[7] < purchase[2]:
+		elif playerResources[6] < purchase[3]:
 			await ctx.send("You don't have enough iron to build that!")
 			return
 		else:
 
 			c.execute('UPDATE buildingsIG SET quantity = quantity + 1 WHERE buildingName = ? AND discord = ?', (building, ctx.message.author.id,))
-			c.execute('UPDATE township SET wood = wood - ?, iron = iron - ? WHERE discord = ?', (purchase[1],purchase[2],ctx.message.author.id,))
+			c.execute('UPDATE township SET wood = wood - ?, iron = iron - ?, popSpace = popSpace + ?, buildingSpace = buildingSpace - 1 WHERE discord = ?', (purchase[2],purchase[3],purchase[4],ctx.message.author.id,))
+			con.commit()
 
 			#So far buildings don't really have an effect. They just provide slots for people
 			await ctx.send("You have built a " + building + "!")
@@ -243,7 +254,7 @@ async def setupGame(ctx):
 
 	buildingsCSV = "./feudalBotBuildings.csv"
 	df = pandas.read_csv(buildingsCSV)
-	df.to_sql("buidingList", con, if_exists = "append", index = False)
+	df.to_sql("buildingList", con, if_exists = "append", index = False)
 	con.commit()
 
 	await ctx.send("Game successfully setup!")
