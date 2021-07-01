@@ -2,9 +2,9 @@ buildingName,woodCost,ironCost
 Hovel",25,0
 House",40,15
 Mansion",80,30
-Farm",25,0
-Lumbermill",25,0
-Mine",25,0
-Market",25,0
-Barracks",25,0
-WizardTower",25,0
+Farm",40,0
+Lumbermill",55,0
+Mine",70,0
+Market",55,10
+Barracks",80,20
+WizardTower",85,15

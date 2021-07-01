@@ -7,6 +7,12 @@ def formatRows(title, rows):
 		embed.add_field(name = row[1], value = row[2], inline = True)
 	return embed
 
+def formatBuildings(title, rows):
+	embed = discord.Embed(title = title)
+	for row in rows:
+		val = str(row[2]) + "/" + str(row[3])
+		embed.add_field(name = row[1], value = val, inline = True)
+	return embed
 
 def displayTown(row, names, startpoint, title):
 	embed = discord.Embed(title = title)

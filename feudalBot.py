@@ -153,8 +153,16 @@ async def recruit(ctx, unit = None):
 		#create a category somewhere that figures out available space (from buildings, not buildingSpace)
 		#and factors in population limit
 
-		if curNumOfBuildings >= reqNumOfBuildings[0] and popSpace[0] > 0 and curMoney[0] >= purchase[2]:
-			#Change the current values
+		if popSpace == 0:
+			await ctx.send("You don't have enough space to recruit that unit!")
+			return
+		elif curMoney[0] < purchase[2]:
+			await ctx.send("You don't have enough money to recruit that unit!")
+			return
+		elif curNumOfBuildings < reqNumOfBuildings[0]:
+			await ctx.send("You don't have the proper number of buildings to recruit that unit!")
+			return
+		else:
 			c.execute('UPDATE unitsIG SET quantity = quantity + 1 WHERE unitName = ? AND discord = ?', (unit, ctx.message.author.id,))
 			c.execute('UPDATE township SET money = money - ? WHERE discord = ?', (purchase[2],ctx.message.author.id,))
 
@@ -165,14 +173,6 @@ async def recruit(ctx, unit = None):
 			con.commit()
 
 			await ctx.send("You have recruited a " + unit + "!")
-
-		else:
-			if popSpace == 0:
-				await ctx.send("You don't have enough space to recruit that unit!")
-			elif curMoney[0] < purchase[2]:
-				await ctx.send("You don't have enough money to recruit that unit!")
-			else:
-				await crx.send("You don't have the proper number of requiiste buildings to recruit that unit!")
 
 
 
@@ -192,25 +192,30 @@ async def build(ctx, building = None):
 		#List buildings
 		c.execute('SELECT * FROM buildingList')
 		rows = c.fetchall()
-		await ctx.send(embed = formatRows("Buildings (Cost)", rows))
+		await ctx.send(embed = formatBuildings("Building Cost (Wood/Iron)", rows))
 
 	else:
-		#Check if player has enoughs space
-		c.execute('SELECT buildingSpace FROM township WHERE discord = ?', (ctx.message.author.id,))
-		spaceAvail = c.fetchone()
-		if spaceAvail[0] <= 0:
-			await ctx.send("You don't have enough space!")
-			return
-		#Passes the preliminary space check
-		else:
-			#Must cast building variable as a str before querying. Why?
-			c.execute('SELECT * FROM buildingList WHERE buildingName = ?', (str(building),))
-			purchase = c.fetchone()
+		#Check if player has enough resources
+		c.execute('SELECT buildingSpace, wood, iron FROM township WHERE discord = ?', (ctx.message.author.id,))
+		playerResources = c.fetchone()
+		c.execute('SELECT * FROM buildingList WHERE buildingName = ?', (building,))
+		purchase = c.fetchone()
 
-			#TODO: Add in a check to see if they have enough money
+		if playerResources[9] <= 0:
+			await ctx.send("You don't have enough space to build that!")
+			return
+		elif playerResources[6] < purchase[2]:
+			await ctx.send("You don't have enough wood to build that!")
+			return
+		elif playerResources[7] < purchase[3]:
+			await ctx.send("You don't have enough iron to build that!")
+			return
+		else:
 
 			c.execute('UPDATE buildingsIG SET quantity = quantity + 1 WHERE buildingName = ? AND discord = ?', (building, ctx.message.author.id,))
-			c.execute('UPDATE township SET money = money - ? WHERE discord = ?', (purchase[2],ctx.message.author.id,))
+			c.execute('UPDATE township SET wood = wood - ?, iron = iron - ? WHERE discord = ?', (purchase[2],purchase[3],ctx.message.author.id,))
+
+			await ctx.send("You have built a " + building + "!")
 
 			#So far buildings don't really have an effect. They just provide slots for people.
 			#Also put the endTurn routine here
