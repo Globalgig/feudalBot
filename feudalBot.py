@@ -2,6 +2,7 @@ import discord
 import os
 import sqlite3, csv
 import pandas
+import random
 from feudalBotRandomEncounters import *
 from feudalBotMessageFormat import *
 from dotenv import load_dotenv
@@ -37,9 +38,9 @@ async def join(ctx, username):
 	row = c.fetchone()
 	if not row:
 		c.execute('INSERT INTO township (discord, name, money, food, wood, iron, popSpace, buildingSpace, attackValue, defenseValue, magicValue) VALUES (?, ?, 100, 100, 50, 0, 8, 4, 0, 0, 0)', (ctx.message.author.id, username,))
-		c.execute('INSERT INTO perTurn (discord, moneyPerTurn, foodPerTurn, woodPerTurn, ironPerTurn) VALUES (?, 0, 0, 0, 0)', (ctx.message.author.id,))
+		c.execute('INSERT INTO perTurn (discord, moneyPerTurn, foodPerTurn, woodPerTurn, ironPerTurn) VALUES (?, 0, 0, 1, 0)', (ctx.message.author.id,))
 		
-		#Creates a row for every building in the buildingsIG table for every discord user joined where the quantity is 0
+		#Each user gets a row for every building in buildingList. All values are set as 0.
 		c.execute('SELECT buildingName FROM buildingList')
 		buildingNames = c.fetchall()
 		for name in buildingNames:
@@ -152,9 +153,6 @@ async def recruit(ctx, unit = None):
 		curNumOfUnits = c.fetchone()
 
 
-		#create a category somewhere that figures out available space (from buildings, not buildingSpace)
-		#and factors in population limit
-
 		if popSpace == 0:
 			await ctx.send("You don't have enough houses to recruit that unit!")
 			return
@@ -184,14 +182,26 @@ async def recruit(ctx, unit = None):
 
 
 
-@bot.command(name = 'explore', aliases = ['e'], help = 'Explore for a new zone to add to your territory!')
-async def explore(ctx):
-	b, m = generateExplore()
-	await ctx.send(b, m)
+@bot.command(name = 'expand', aliases = ['e'], help = 'Explore for a new zone to add to your territory!')
+async def expand(ctx):
+	buildingSlots, clearDifficulty, acquireCost = generateExplore()
+	c.execute('SELECT attackValue, food FROM township WHERE discord = ?', (ctx.message.author.id,))
+	value = c.fetchone()
+	if value[0] < clearDifficulty:
+		await ctx.send("You have found a new tile with slots:" + str(buildingSlots) + ", difficulty: " + str(clearDifficulty) + ", cost: " + str(acquireCost) + ". However, you don't have enough attackValue to acquire it.")
+		endTurn(ctx)
+		return
+	elif value[1] < acquireCost:
+		await ctx.send("You have found a new tile with slots:" + str(buildingSlots) + ", difficulty: " + str(clearDifficulty) + ", cost: " + str(acquireCost) + ". However, you don't have enough food to acquire it.")
+		endTurn(ctx)
+		return
+	else:
+		await ctx.send("You have acquired a new tile with slots:" + str(buildingSlots) + ", difficulty: " + str(clearDifficulty) + ", cost: " + str(acquireCost) + "!")
+		c.execute('UPDATE township SET buildingSpace = buildingSpace + ?, food = food - ? WHERE discord = ?', (buildingSlots, acquireCost, ctx.message.author.id,))
+		con.commit()
+		endTurn(ctx)
+		return
 
-	await ctx.send("Not implemented! However, your turn has still ended.")
-	endTurn(ctx)
-	return
 
 
 
@@ -237,17 +247,42 @@ async def build(ctx, building = None):
 
 
 #This is supposed to be like the attack feature
-@bot.command(name = 'pillage', alisases = ['p'])
+@bot.command(name = 'pillage', aliases = ['p'])
 async def pillage(ctx, target):
-	#implement
+	c.execute('SELECT * FROM township WHERE discord != ?', (ctx.message.author.id))
+	players = c.fetchall()
+	target = random.choice(players)
+
 	await ctx.send("Not implemented! However, your turn has still ended.")
 	endTurn(ctx)
 	return
 
+@bot.command(name = 'adventure', aliases = ['a'])
+async def adventure(ctx):
+	aDiff, reward = generateAdventure()
+	c.execute('SELECT money, food, wood, iron, attackValue FROM township WHERE discord = ?', (ctx.message.author.id,))
+	values = c.fetchone()
+
+	if values[4] >= aDiff[0]:
+		await ctx.send("You have found " + aDiff[1] + " and slayed it! Your township has gained: " + str(reward[0]) + " money, " + str(reward[1]) + " food, " + str(reward[2]) + " wood, and " + str(reward[3]) + " iron! Huzzah!")
+		c.execute('UPDATE township SET money = money + ?, food = food + ?, wood = wood + ?, iron = iron + ? WHERE discord = ?', (reward[0],reward[1],reward[2],reward[3],ctx.message.author.id))
+		endTurn(ctx)
+		return	
+	else:
+		await ctx.send("You have found " + aDiff[1] + " but you don't have enough strength to slay it! Your warriors have ran away!")
+		endTurn(ctx)
+		return
+
+
 
 #Much cuter now that the csvs are set up 
-@bot.command(name = 'setupGame', alisases = ['setup'], help = 'Supplies the values that populate the building/unit tables.')
-async def setupGame(ctx):
+@bot.command(name = 'refreshLists', alisases = ['refresh'], help = 'Supplies the values that populate the building/unit tables.')
+async def refreshLists(ctx):
+
+	c.execute('DELETE FROM unitList')
+	c.execute('DELETE FROM buildingList')
+	con.commit()
+
 	unitsCSV = "./feudalBotUnits.csv"
 	df = pandas.read_csv(unitsCSV)
 	df.to_sql("unitList", con, if_exists = "append", index = False)
@@ -257,7 +292,7 @@ async def setupGame(ctx):
 	df.to_sql("buildingList", con, if_exists = "append", index = False)
 	con.commit()
 
-	await ctx.send("Game successfully setup!")
+	await ctx.send("Tables successfully refreshed!")
 
 
 def endTurn(ctx):
