@@ -1,18 +1,21 @@
 import random
 
-def generateExplore():
-	buildingSlotWeight = [2,4,2,1]
-	buildingSlots = [2,1,2,3]
+def generateExpand(eCount):
+	buildingSlotWeight = [1,8,4,2]
+	buildingSlots = [0,1,2,3]
 	rSlots = random.choices(buildingSlots, weights = buildingSlotWeight)[0]
 
-	clearDifficultyWeight = [4,4,2,1]
-	clearDifficulty = [0,1,2,3]
-	rDiff = random.choices(clearDifficulty, weights = clearDifficultyWeight)[0] * 2 + random.randint(0,1)
+	#Will return rSlots, rDiff, rCost. Respectively, # of buildings slots, difficulty value, and food cost of acquiring
 
-	#ASSIMILATION COST. Use math, probably (don't leave as 10)
-	rCost = 10
+	return rSlots, expandDifficulty(eCount), expandCost(eCount)
 
-	return rSlots, rDiff, rCost
+def expandCost(eCount):
+	return 10 * 2 ** eCount
+
+def expandDifficulty(eCount):
+
+	#Chooses a random value on a -2/+2 range where the value can't be less than zero
+	return random.choices([x + eCount if x + eCount >= 0 else 0 for x in range(-2,3)], weights = [1,2,4,2,1])
 
 def generateAdventure():
 	adventureDifficultyWeight = [16,20,20,16,8,4,2,1]

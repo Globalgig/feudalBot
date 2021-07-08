@@ -4,7 +4,8 @@ def formatRows(title, rows):
 
 	embed = discord.Embed(title = title)
 	for row in rows:
-		embed.add_field(name = row[1], value = row[2], inline = True)
+		value = str(row[2]) + " [" + str(row[5]) + "," + str(row[6]) + "," + str(row[7]) + "," + str(row[8]) + "]"
+		embed.add_field(name = row[1], value = value, inline = True)
 	return embed
 
 def formatBuildings(title, rows):
