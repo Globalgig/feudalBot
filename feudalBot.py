@@ -29,10 +29,10 @@ async def on_ready():
 	c.execute('CREATE TABLE IF NOT EXISTS buildingList (id integer PRIMARY KEY, buildingName varchar(255), woodCost integer, ironCost integer, popSlots integer)')
 	c.execute('CREATE TABLE IF NOT EXISTS unitsIG (id integer PRIMARY KEY, discord integer, unitName varchar(255), quantity integer DEFAULT 0)')
 	c.execute('CREATE TABLE IF NOT EXISTS buildingsIG (id integer PRIMARY KEY, discord integer, buildingName varchar(255), quantity integer DEFAULT 0)')
+	c.execute('CREATE TABLE IF NOT EXISTS spells (id integer PRIMARY KEY, spellName varchar(255), cost integer, magicValueRequired integer)')
 	con.commit()
 
 	await timer()
-
 
 
 
@@ -48,7 +48,7 @@ async def join(ctx, username = None):
 	identical = c.execute('SELECT * FROM township WHERE discord = ?', (ctx.message.author.id,))
 	row = c.fetchone()
 	if not row:
-		c.execute('INSERT INTO township (discord, name, money, food, wood, iron, popSpace, buildingSpace, attackValue, defenseValue, magicValue) VALUES (?, ?, 100, 100, 50, 0, 4, 3, 0, 0, 0)', (ctx.message.author.id, username,))
+		c.execute('INSERT INTO township (discord, name, money, food, wood, iron, popSpace, buildingSpace, attackValue, defenseValue, magicValue) VALUES (?, ?, 100, 100, 50, 0, 4, 3, 0, 1, 0)', (ctx.message.author.id, username,))
 		c.execute('INSERT INTO perTurn (discord, moneyPerTurn, foodPerTurn, woodPerTurn, ironPerTurn) VALUES (?, 3, 2, 1, 0)', (ctx.message.author.id,))
 		
 		#Each user gets a row for every building in buildingList. All values are set as 0.
@@ -70,7 +70,8 @@ async def join(ctx, username = None):
 		await ctx.send("You're already in the game!")
 
 
-@bot.command(name = 'leave', aliases = ['l'])
+
+@bot.command(name = 'leave', aliases = ['l'], help = "Leave the game!")
 async def leave(ctx):
 	c.execute('DELETE FROM township WHERE discord = ?', (ctx.message.author.id,))
 	c.execute('DELETE FROM perTurn WHERE discord = ?', (ctx.message.author.id,))
@@ -78,6 +79,7 @@ async def leave(ctx):
 	c.execute('DELETE FROM buildingsIG WHERE discord = ?', (ctx.message.author.id,))
 	con.commit()
 	await ctx.send("You've left the game!")
+
 
 
 #DISPAY CURRENT RESOURCES AND SO ON
@@ -121,16 +123,14 @@ async def select(ctx, displayType = None):
 		await ctx.send(embed = displayBuildingsUnits(rows, title))
 	else:
 		await ctx.send("Invalid argument! Try: 'Town', 'perTurn', 'Buildings', or 'Units'")
-
-
 #Probably add functionality that lets you look at the value per turn table and also lets you look at other people's townships and units and also buildings and everything hahaha
 
 
-#TURN ACTIONS
-@bot.command(name = 'recruit', aliases = ['r'], help = "Spend money to recruit a new unit!")
-async def recruit(ctx, unit = None):
-	if unit == None or unit == "list":
 
+@bot.command(name = 'recruit', aliases = ['r'], help = "Spend money to recruit a new unit! New units use up 1 popSpace.")
+async def recruit(ctx, unit = ""):
+	unit = unit.lower()
+	if unit == "" or unit == "list" or unit == "l":
 		c.execute('SELECT * FROM unitList')
 		rows = c.fetchall()
 		await ctx.send(embed = formatUnits("Units (Cost: [M,F,W,I])", rows))
@@ -152,7 +152,7 @@ async def recruit(ctx, unit = None):
 		c.execute('SELECT quantity FROM unitsIG WHERE discord = ? AND unitName = ?', (ctx.message.author.id,unit))
 		curNumOfUnits = c.fetchone()
 
-
+		#Here's the actual parsing of the variables
 		if popSpace == 0:
 			await ctx.send("You don't have enough houses to recruit that unit!")
 			return
@@ -182,7 +182,7 @@ async def recruit(ctx, unit = None):
 
 
 @bot.command(name = 'expand', aliases = ['e'], help = 'Explore for a new zone to add to your territory! Expends 1 attackValue on use.')
-async def expand(ctx, arg = None):
+async def expand(ctx, arg = ""):
 	arg = arg.lower()
 	c.execute("SELECT expandCount FROM township WHERE discord = ?", (ctx.message.author.id,))
 	eCount = c.fetchone()[0]
@@ -208,11 +208,10 @@ async def expand(ctx, arg = None):
 
 
 
-
-
 @bot.command(name = 'build', aliases = ['b'], help = 'Specify building to buy or leave empty for a list.')
-async def build(ctx, building = None):
-	if building == None or building == "list":
+async def build(ctx, building = ""):
+	building = building.lower()
+	if building == "" or building == "list" or building == "l":
 
 		#List buildings
 		c.execute('SELECT * FROM buildingList')
@@ -246,6 +245,7 @@ async def build(ctx, building = None):
 			return
 
 
+
 #This is the attack feature
 @bot.command(name = 'pillage', aliases = ['p'], help = "Expend 1 attackValue to steal resources from a random player. Lose an extra (and gain no resources) on a failure.")
 async def pillage(ctx):
@@ -257,29 +257,54 @@ async def pillage(ctx):
 
 	if attacker[9] > target[10]:
 		#attacker victory
-		c.execute('UPDATE township SET money = money + ?, food = food + ?, wood = wood + ?, iron = iron + ?, attackValue = attackValue - 1 WHERE discord = ?', (round(target[3] * .1), round(target[4] * .1), round(target[5] * .1), round(target[6] * .1), attacker[1],))
-		c.execute('UPDATE township SET money = money - ?, food = food - ?, wood = wood - ?, iron = iron - ? WHERE discord = ?', (round(target[3] * .1), round(target[4] * .1), round(target[5] * .1), round(target[6] * .1), target[1],))
+		#Calculates the percent that should be stolen. More should be stolen in closer fights so strong players don't benefit from preying on weak players.
+		percentStolen = round(1 - (attacker[9]/(attacker[9] + defender[10])),1)
+
+
+		c.execute('UPDATE township SET money = money + ?, food = food + ?, wood = wood + ?, iron = iron + ?, attackValue = attackValue - 1 WHERE discord = ?', (round(target[3] * percentStolen), round(target[4] * percentStolen), round(target[5] * percentStolen), round(target[6] * percentStolen), attacker[1],))
+		c.execute('UPDATE township SET money = money - ?, food = food - ?, wood = wood - ?, iron = iron - ? WHERE discord = ?', (round(target[3] * percentStolen), round(target[4] * percentStolen), round(target[5] * percentStolen), round(target[6] * percentStolen), target[1],))
 		con.commit()
-		await ctx.send("You have successfully raided " + str(target[2]) + " and stolen: " + str(target[3]) + " money, " + str(target[4]) + " food, " + str(target[5]) + " wood, and " + str(target[6]) + " iron! Huzzah!")	
+		await ctx.send("You have successfully raided " + str(target[2]) + " and stolen " + percentStolen + "% of their supplies. Your bounty is: " + str(target[3]) + " money, " + str(target[4]) + " food, " + str(target[5]) + " wood, and " + str(target[6]) + " iron! Huzzah!")	
 	else:
 		#defender victory
 		c.execute('UPDATE township SET attackValue = attackValue - 2 WHERE discord = ?', (attacker[1],))
 		await ctx.send("You have failed to raid " + str(target[2]) + "and have lost an extra attackValue!")
 	return
 
-@bot.command(name = 'adventure', aliases = ['a'])
-async def adventure(ctx):
-	aDiff, reward = generateAdventure()
-	c.execute('SELECT money, food, wood, iron, attackValue FROM township WHERE discord = ?', (ctx.message.author.id,))
-	values = c.fetchone()
 
-	if values[4] >= aDiff[0]:
-		await ctx.send("You have found " + aDiff[1] + " and slayed it! Your township has gained: " + str(reward[0]) + " money, " + str(reward[1]) + " food, " + str(reward[2]) + " wood, and " + str(reward[3]) + " iron! Huzzah!")
-		c.execute('UPDATE township SET money = money + ?, food = food + ?, wood = wood + ?, iron = iron + ? WHERE discord = ?', (reward[0],reward[1],reward[2],reward[3],ctx.message.author.id))
-		return	
-	else:
-		await ctx.send("You have found " + aDiff[1] + " but you don't have enough strength to slay it! Your warriors have ran away!")
+
+@bot.command(name = 'adventure', aliases = ['a'], help = "Send your troops to fight for supplies! Expends 1 attackValue on use and an extra on a loss/ties.")
+async def adventure(ctx, arg = ""):
+	arg = arg.lower()
+	c.execute("SELECT adventureCount FROM township WHERE discord = ?", (ctx.message.author.id,))
+	aCount = c.fetchone()[0]
+	if arg == "list" or arg == "l":
+		#aDiffs is the potential range of aDiff. Purely for user purposes
+		aDiffs = [aCount - 3 if aCount - 2 > 0 else 0, aCount + 3]
+		await ctx.send("Your next adventure will have a difficulty of " + str(aDiffs[0]) + "-" + str(aDiffs[1]) + ".")
 		return
+	else:
+		aDiff, reward = generateAdventure(aCount)
+		c.execute('SELECT money, food, wood, iron, attackValue FROM township WHERE discord = ?', (ctx.message.author.id,))
+		values = c.fetchone()
+
+		if values[4] > aDiff[0]:
+			await ctx.send("You have found a " + aDiff[1] + " and slayed it! Your township has gained: " + str(reward[0]) + " money, " + str(reward[1]) + " food, " + str(reward[2]) + " wood, and " + str(reward[3]) + " iron! Huzzah!")
+			c.execute('UPDATE township SET money = money + ?, food = food + ?, wood = wood + ?, iron = iron + ?, attackValue = attackValue - 1 WHERE discord = ?', (reward[0],reward[1],reward[2],reward[3],ctx.message.author.id))
+			
+			#Catch statment to ensure no negative attackValues
+			if values[4] < 1:
+				c.execute('UPDATE township SET attackValue = 0 WHERE discord = ?', (ctx.message.author.id,))
+			return	
+
+		else:
+			await ctx.send("You have found a " + aDiff[1] + " but you don't have enough strength to slay it! Your warriors have ran away, losing an extra attackValue!")
+			c.execute('UPDATE township SET attackValue = attackValue - 2 WHERE discord = ?', (ctx.message.author.id,))
+
+			#Catch statment to ensure no negative attackValues
+			if values[4] < 2:
+				c.execute('UPDATE township SET attackValue = 0 WHERE discord = ?', (ctx.message.author.id,))
+			return
 
 
 
@@ -301,6 +326,13 @@ async def refreshLists(ctx):
 	con.commit()
 
 	await ctx.send("Tables successfully refreshed!")
+
+
+
+@bot.command(name = "tutorial", aliases = ['assistance', 'breakdown'], help = "DMs a guide for new players.")
+async def tutorial(ctx):
+	await ctx.message.author.send(embed = displayTutorial())
+
 
 
 async def timer():
