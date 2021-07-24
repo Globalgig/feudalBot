@@ -15,8 +15,10 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 con = sqlite3.connect('feudalBot.db')
 c = con.cursor()
+turn_timer = 60
 
 bot = commands.Bot(command_prefix='^')
+
 
 #THE GREAT SETUP OF TABLES
 @bot.event
@@ -29,7 +31,7 @@ async def on_ready():
 	c.execute('CREATE TABLE IF NOT EXISTS buildingList (id integer PRIMARY KEY, buildingName varchar(255), woodCost integer, ironCost integer, popSlots integer)')
 	c.execute('CREATE TABLE IF NOT EXISTS unitsIG (id integer PRIMARY KEY, discord integer, unitName varchar(255), quantity integer DEFAULT 0)')
 	c.execute('CREATE TABLE IF NOT EXISTS buildingsIG (id integer PRIMARY KEY, discord integer, buildingName varchar(255), quantity integer DEFAULT 0)')
-	c.execute('CREATE TABLE IF NOT EXISTS spells (id integer PRIMARY KEY, spellName varchar(255), cost integer, magicValueRequired integer)')
+	c.execute('CREATE TABLE IF NOT EXISTS spellList (id integer PRIMARY KEY, spellName varchar(255), cost integer, magicValueRequired integer)')
 	con.commit()
 
 	await timer()
@@ -48,8 +50,8 @@ async def join(ctx, username = None):
 	identical = c.execute('SELECT * FROM township WHERE discord = ?', (ctx.message.author.id,))
 	row = c.fetchone()
 	if not row:
-		c.execute('INSERT INTO township (discord, name, money, food, wood, iron, popSpace, buildingSpace, attackValue, defenseValue, magicValue) VALUES (?, ?, 100, 100, 50, 0, 4, 3, 0, 1, 0)', (ctx.message.author.id, username,))
-		c.execute('INSERT INTO perTurn (discord, moneyPerTurn, foodPerTurn, woodPerTurn, ironPerTurn) VALUES (?, 3, 2, 1, 0)', (ctx.message.author.id,))
+		c.execute('INSERT INTO township (discord, name, money, food, wood, iron, popSpace, buildingSpace, attackValue, defenseValue, magicValue) VALUES (?, ?, 100, 100, 150, 0, 5, 5, 0, 1, 0)', (ctx.message.author.id, username,))
+		c.execute('INSERT INTO perTurn (discord, moneyPerTurn, foodPerTurn, woodPerTurn, ironPerTurn) VALUES (?, 1, 2, 0, 0)', (ctx.message.author.id,))
 		
 		#Each user gets a row for every building in buildingList. All values are set as 0.
 		c.execute('SELECT buildingName FROM buildingList')
@@ -171,9 +173,9 @@ async def recruit(ctx, unit = ""):
 		c.execute('UPDATE township SET money = money - ? WHERE discord = ?', (purchase[2],ctx.message.author.id,))
 
 		#perTurn
-		c.execute('UPDATE perTurn SET moneyPerTurn = moneyPerTurn + ?, foodPerTurn = foodPerTurn + ?, woodPerTurn = woodPerTurn + ?, ironPerTurn = ironPerTurn + ?', (purchase[5], purchase[6], purchase[7], purchase[8],))
+		c.execute('UPDATE perTurn SET moneyPerTurn = moneyPerTurn + ?, foodPerTurn = foodPerTurn + ?, woodPerTurn = woodPerTurn + ?, ironPerTurn = ironPerTurn + ? WHERE discord = ?', (purchase[5], purchase[6], purchase[7], purchase[8],ctx.message.author.id,))
 		#township
-		c.execute('UPDATE township SET popSpace = popSpace - 1, attackValue = attackValue + ?, defenseValue = defenseValue + ?, magicValue = magicValue + ?', (purchase[8], purchase[10], purchase[11],))
+		c.execute('UPDATE township SET popSpace = popSpace - 1, attackValue = attackValue + ?, defenseValue = defenseValue + ?, magicValue = magicValue + ? WHERE discord = ?', (purchase[8], purchase[10], purchase[11],ctx.message.author.id,))
 		con.commit()
 
 		await ctx.send("You have recruited a " + unit + "!")
@@ -308,6 +310,21 @@ async def adventure(ctx, arg = ""):
 
 
 
+@bot.command(name = 'cast', aliases = ['c'], help = "Invoke powerful spells at the cost of money. Use the 'list' argument to display all available spells.")
+async def cast(ctx, arg = ""):
+	arg = arg.lower()
+	c.execute("SELECT magicValue FROM township WHERE discord = ?", (ctx.message.author.id,))
+	mValue = c.fetchone()[0]
+	if arg == "" or arg == "list" or arg == "l":
+		c.execute('SELECT * FROM spellList')
+		rows = c.fetchall()
+		await ctx.send(embed = formatUnits("Units (Cost: [M,F,W,I])", rows))
+	else:
+		await ctx.send("Not implemented yet!")
+
+
+
+
 #Much cuter now that the csvs are set up 
 @bot.command(name = 'refreshLists', aliases = ['refresh'], help = 'Supplies the values that populate the building/unit tables.')
 async def refreshLists(ctx):
@@ -329,7 +346,7 @@ async def refreshLists(ctx):
 
 
 
-@bot.command(name = "tutorial", aliases = ['assistance', 'breakdown'], help = "DMs a guide for new players.")
+@bot.command(name = "tutorial", aliases = ['t'], help = "DMs a guide for new players.")
 async def tutorial(ctx):
 	await ctx.message.author.send(embed = displayTutorial())
 
@@ -337,7 +354,7 @@ async def tutorial(ctx):
 
 async def timer():
 	while True:
-		await asyncio.sleep(30)
+		await asyncio.sleep(turn_timer)
 		c.execute('SELECT * FROM township')
 		players = c.fetchall()
 		for player in players:
