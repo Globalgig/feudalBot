@@ -38,3 +38,19 @@ def displayTutorial():
 	embed.add_field(name = "Trading (^t)", value = "Not implemented.", inline = False)
 	embed.add_field(name = "Displaying (^d)", value = "Displays your township's resources. Use the 'pt', 'building', or 'unit' argument to respectively display the perTurn, building, or unit tables for your township.", inline = False)
 	return embed
+
+def generateResourceEmbed(row):
+	embed = discord.Embed(title = "Township resources:")
+	embed.add_field(name = "Food (/d)", value = str(row[2]) + " (" + str(row[3]) + ")")
+	embed.add_field(name = "Wood (/d)", value = str(row[4]) + " (" + str(row[5]) + ")")
+	embed.add_field(name = "Stone (/d)", value = str(row[6]) + " (" + str(row[7]) + ")")
+	embed.add_field(name = "Metal (/d)", value = str(row[8]) + " (" + str(row[9]) + ")")
+	embed.add_field(name = "Power (/d)", value = str(row[10]) + " (" + str(row[11]) + ")")
+	embed.add_field(name = "Crystals (/d)", value = str(row[12]) + " (" + str(row[13]) + ")")
+	return embed
+
+def generateTownshipEmbed(row):
+	embed = discord.Embed(title = "Township statistics:")
+	embed.add_field(name = "Level", value = str(row[0]))
+	embed.add_field(name = "Days Passed", value = str(row[1]))
+	return embed

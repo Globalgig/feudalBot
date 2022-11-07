@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS township (id integer PRIMARY KEY, guildId integer, name varchar(255), daysPassed integer DEFAULT 0, level integer DEFAULT 0)
+CREATE TABLE IF NOT EXISTS resources (id integer PRIMARY KEY, guildId integer, food integer DEFAULT 0, foodPer integer DEFAULT 0, wood integer DEFAULT 0, woodPer integer DEFAULT 0, stone integer DEFAULT 0, stonePer integer DEFAULT 0, metal integer DEFAULT 0, metalPer integer DEFAULT 0, crystals integer DEFAULT 0, crystalsPer integer DEFAULT 0, power integer DEFAULT 0, powerPer integer DEFAULT 0)
+CREATE TABLE IF NOT EXISTS buildings (id integer PRIMARY KEY, name varchar(255), tier integer, woodCost integer, stoneCost integer, ironCost integer, powerCost integer, crystalCost integer, description varchar(255), targetUnit varchar(255), targetMath varchar(255), value integer)
+CREATE TABLE IF NOT EXISTS units (id integer PRIMARY KEY, name varchar(255), initialFoodCost integer, levelRequired integer, foodPer integer, woodPer integer, stonePer integer, metalPer integer, powerPer integer, crystalsPer integer, mod integer, mult integer, pow integer)
+CREATE TABLE IF NOT EXISTS buildingsAcquired (id integer PRIMARY KEY, guildId integer, name varchar(255))
+CREATE TABLE IF NOT EXISTS unitsAcquired (id integer PRIMARY KEY, guildId integer, name varchar(255))
