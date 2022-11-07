@@ -1,0 +1,33 @@
+name,tier,woodCost,stoneCost,ironCost,powerCost,crystalCost,description,targetUnit,targetMath,value
+farm,1,1,1,1,1,1,Allows recruitment of Rabbit Farmer,rabbit_farmer,,
+forester_lodge,1,1,1,1,1,1,Allows recruitment of Squirrel Lumberjack,squirrel_lumberjack,,
+mineshaft,2,1,1,1,1,1,Allows recruitment of Mouse Miner,mouse_miner,,
+granary,2,1,1,1,1,1,Allows recruitment of Pig Farmer,pig_farmer,,
+lumber_yard,2,1,1,1,1,1,Allows recruitment of Woodpecker Lumberjack,woodpecker_lumberjack,,
+smithy,3,1,1,1,1,1,Allows recruitment of Goat Blacksmith,goat_blacksmith,,
+grain_mill,3,1,1,1,1,1,Allows recruitment of Cow Farmer,cow_farmer,,
+saw_mill,3,1,1,1,1,1,Allows recruitment of Beaver Lumberjack,beaver_lumberjack,,
+prospectors_office,3,1,1,1,1,1,Allows recruitment of Weasel Miner,weasel_miner,,
+barracks,4,1,1,1,1,1,Allows recruitment of Skunk Knight,skunk_knight,,
+strip_mine,4,1,1,1,1,1,Allows recruitment of Mole Miner,mole_miner,,
+forge,4,1,1,1,1,1,Allows recruitment of Horse Blacksmith,horse_blacksmith,,
+gem_cave,5,1,1,1,1,1,Allows recruitment of Shrew Wizard,shrew_wizard,,
+industrial_foundry,5,1,1,1,1,1,Allows recruitment of Ox Blacksmith,ox_blacksmith,,
+castle,5,1,1,1,1,1,Allows recruitment of Fox Knight,fox_knight,,
+keep,6,1,1,1,1,1,Allows recruitment of Badger Knight,badger_knight,,
+gem_garden,6,1,1,1,1,1,Allows recruitment of Frog Wizard,frog_wizard,,
+moon_catcher,7,1,1,1,1,1,Allows recruitment of Owl Wizard,owl_wizard,,
+rabbit_hutch,4,1,1,1,1,1,Adds +1 to Rabbit Farmer production,rabbit_farmer,mod,1
+carrot_statue,5,1,1,1,1,1,Adds +3 to Rabbit Farmer production,rabbit_farmer,mod,3
+bunny_church,6,1,1,1,1,1,Adds x2 to Rabbit Farmer production,rabbit_farmer,mult,2
+bunny_theater,7,1,1,1,1,1,Adds +5 to Rabbit Farmer production,rabbit_farmer,mod,5
+rabbit_highrise,8,1,1,1,1,1,Adds x3 to Rabbit Farmer production,rabbit_farmer,mult,3
+carrot_laboratory,9,1,1,1,1,1,Adds x4 to Rabbit Farmer production,rabbit_farmer,mult,4
+quantum_carrot,10,1,1,1,1,1,Adds ^2 to Rabbit Farmer production,rabbit_farmer,pow,2
+squirrel_burrows,4,1,1,1,1,1,Adds +1 to Squirrel Lumberjack production,squirrel_lumberjack,mod,1
+acorn_garden,5,1,1,1,1,1,Adds +3 to Squirrel Lumberjack production,squirrel_lumberjack,mod,3
+bird_feeders,6,1,1,1,1,1,Adds x2 to Squirrel Lumberjack production,squirrel_lumberjack,mult,2
+acorn_billboards,7,1,1,1,1,1,Adds +5 to Squirrel Lumberjack production,squirrel_lumberjack,mod,5
+acorn_grocery_store,8,1,1,1,1,1,Adds x3 to Squirrel Lumberjack production,squirrel_lumberjack,mult,3
+gated_squirrel_community,9,1,1,1,1,1,Adds x4 to Squirrel Lumberjack production,squirrel_lumberjack,mult,4
+temporal_acorn,10,1,1,1,1,1,Adds ^2 to Squirrel Lumberjack production,squirrel_lumberjack,pow,2
